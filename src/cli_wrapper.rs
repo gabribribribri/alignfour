@@ -1,3 +1,8 @@
+/*
+    You can use this if you want to play on the CLI.
+    Tho a much better GUI is coming soon.
+*/
+
 use crate::align_four_engine::{AlignFourEngine, Team};
 
 pub struct CLIWrapper {
@@ -10,22 +15,20 @@ impl CLIWrapper {
             game: AlignFourEngine::default(),
         }
     }
+
     pub fn run(mut self) {
         loop {
             self.print();
             println!();
             match self.game.check_win() {
-                Some(team) => {
-                    println!(
-                        "Les {} ont gagnés !!!",
-                        if team == Team::Red { 'X' } else { 'O' }
-                    );
+                Team::Red | Team::Blue => {
+                    println!("Les {} ont gagnés !!!", self.turn_symbol());
                     break;
                 }
-                None => (),
+                Team::None => (),
             }
             loop {
-                let sanitized_user_input = CLIWrapper::get_sanitized_user_input();
+                let sanitized_user_input = self.get_sanitized_user_input();
                 match self.game.play_at(sanitized_user_input - 1) {
                     Ok(_) => (),
                     Err(_) => {
@@ -40,17 +43,17 @@ impl CLIWrapper {
     }
 
     fn print(&mut self) {
-        println!(" 1 | 2 | 3 | 4 | 5 | 6 | 7");
-        for y in 0..self.game.height {
+        println!(" 1 | 2 | 3 | 4 | 5 | 6 | 7 |");
+        for y in 0..self.game.height() {
             let mut line = String::new();
             line.push(' ');
-            for x in 0..self.game.width {
+            for x in 0..self.game.width() {
                 // dbg!(x, y, self.game.at(x, y));
                 // dbg!(self.game.at(6, 4), self.game.at(0, 5));
                 line.push(match self.game.at(x, y) {
-                    Some(Team::Red) => 'X',
-                    Some(Team::Blue) => 'O',
-                    None => ' ',
+                    Team::Red => 'X',
+                    Team::Blue => 'O',
+                    Team::None => ' ',
                 });
                 line.push_str(" | ");
             }
@@ -58,9 +61,20 @@ impl CLIWrapper {
             println!("---+---+---+---+---+---+---+");
         }
     }
-    fn get_sanitized_user_input() -> usize {
+    fn turn_symbol(&self) -> char {
+        if self.game.turn == Team::Red {
+            'X'
+        } else {
+            'O'
+        }
+    }
+
+    fn get_sanitized_user_input(&self) -> usize {
         loop {
-            println!(">> Enter the column to play [1-7] :");
+            println!(
+                "[{}] >> Enter the column to play [1-7] :",
+                self.turn_symbol()
+            );
             let mut input = String::new();
             std::io::stdin()
                 .read_line(&mut input)
