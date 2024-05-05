@@ -62,7 +62,7 @@ impl CLIWrapper {
         }
     }
     fn turn_symbol(&self) -> char {
-        if self.game.turn == Team::Red {
+        if self.game.turn() == Team::Red {
             'X'
         } else {
             'O'
