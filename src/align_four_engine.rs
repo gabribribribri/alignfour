@@ -8,82 +8,116 @@ type Cell = (isize, isize);
 pub enum Team {
     Red,
     Blue,
+    None,
 }
 
 pub struct AlignFourEngine {
-    grid: Vec<Option<Team>>,
-    pub width: usize,
-    pub height: usize,
+    grid: Vec<Team>,
+    width: usize,
+    height: usize,
     turn: Team,
 }
 
 impl AlignFourEngine {
+    // Constructors
     pub fn default() -> Self {
         Self {
-            grid: vec![None; 7 * 6],
+            grid: vec![Team::None; 7 * 6],
             width: 7,
             height: 6,
             turn: Team::Blue,
         }
     }
+
+    pub fn from_grid(grid_str: &str) -> Self {
+        let mut grid = Vec::new();
+        for c in grid_str.chars() {
+            match c {
+                'X' => grid.push(Team::Red),
+                'O' => grid.push(Team::Blue),
+                '-' => grid.push(Team::None),
+                _ => (),
+            }
+        }
+        Self {
+            grid,
+            width: 7,
+            height: 6,
+            turn: Team::Blue,
+        }
+    }
+
     #[deprecated]
     #[allow(dead_code)]
     pub fn new(width: usize, height: usize) -> Self {
         Self {
-            grid: vec![None; width * height],
+            grid: vec![Team::None; width * height],
             width,
             height,
             turn: Team::Blue,
         }
     }
 
-    pub fn at(&self, x: usize, y: usize) -> Option<Team> {
+    // Getters \ Setters
+    pub fn width(&self) -> usize {
+        self.width
+    }
+    pub fn height(&self) -> usize {
+        self.height
+    }
+    pub fn turn(&self) -> Team {
+        self.turn
+    }
+
+    pub fn at(&self, x: usize, y: usize) -> Team {
         self.grid[y * self.width + x]
     }
 
-    fn at_mut(&mut self, x: usize, y: usize) -> &mut Option<Team> {
+    fn at_mut(&mut self, x: usize, y: usize) -> &mut Team {
         &mut self.grid[y * self.width + x]
     }
 
+    fn is_in_grid(&self, coo: &Cell) -> bool {
+        coo.0 >= 0 && coo.1 >= 0 && coo.0 < self.width as isize && coo.1 < self.height as isize
+    }
+
+    // Others
     pub fn switch_turns(&mut self) {
         self.turn = match self.turn {
             Team::Red => Team::Blue,
             Team::Blue => Team::Red,
+            _ => panic!("Absolutly not supposed to have a 'None' here"),
         }
     }
 
     pub fn play_at(&mut self, x: usize) -> Result<usize, AlignFourError> {
-        // println!("Call from play_at !");
-        // dbg!(&self.grid);
         for y in (0..self.height).rev() {
             match self.at(x, y) {
-                Some(_) => continue,
-                None => {
-                    *self.at_mut(x, y) = Some(self.turn);
+                Team::None => {
+                    *self.at_mut(x, y) = self.turn;
                     return Ok(y);
                 }
+                _ => continue,
             }
         }
 
         return Err(AlignFourError::ColumnFull);
     }
 
-    pub fn check_win(&self) -> Option<Team> {
-        /**
-         *
-         * It is very weird how I am at the same time
-         * horrified by what I just wrote and
-         * amazingly proud of myself for the masterpiece of engineering
-         * that THIS is
-         *
-         */
+    pub fn check_win(&self) -> Team {
+        /* It is very weird how I am at the same time horrified by what I just wrote and amazingly proud of myself for the masterpiece of engineering that THIS is */
 
         type Pattern = [Cell; 4];
-        let start_point: Pattern = [(-1, 0), (0, -1), (-3, -1), (self.width as isize + 2, -1)]; // one less/more that the actual start
+        let start_point: Pattern = [
+            (0, -1),
+            (-1, 0),
+            (self.height as isize - 3, -1),
+            (self.width as isize + self.height as isize - 3, -1),
+        ]; // one less/more that the actual start
         let next_line: Pattern = [(1, 0), (0, 1), (1, 0), (-1, 0)];
+        let next_cell: Pattern = [(0, 1), (1, 0), (1, 1), (-1, 1)];
         let cell_repeats: [isize; 4] = [6, 7, 6, 6];
         let line_repeats: [isize; 4] = [7, 6, 7, 7];
-        let next_cell: Pattern = [(0, 1), (1, 0), (1, 1), (-1, 1)];
 
         for strategy in 0..4usize {
             for line_repeat in 0..line_repeats[strategy] {
@@ -91,43 +125,120 @@ impl AlignFourEngine {
                     start_point[strategy].0 + next_line[strategy].0 * line_repeat,
                     start_point[strategy].1 + next_line[strategy].1 * line_repeat,
                 );
-                let mut suite_color: Option<Team> = None;
+                let mut suite_team: Team = Team::None;
                 let mut longest: u8 = 0;
 
-                for cell_repeat in 0..cell_repeats[strategy] {
+                for _cell_repeat in 0..cell_repeats[strategy] {
                     current_cell.0 += next_cell[strategy].0;
                     current_cell.1 += next_cell[strategy].1;
-
                     if !self.is_in_grid(&current_cell) {
                         continue;
                     }
-
-                    match self.at(current_cell.0 as usize, current_cell.1 as usize) {
-                        Some(cell_team) => match suite_color {
-                            Some(suite_team) => {
-                                if cell_team == suite_team {
-                                    if longest >= 4 {
-                                        return Some(suite_team);
-                                    } else {
-                                        longest += 1
-                                    }
-                                } else {
-                                    longest = 1;
-                                }
-                            }
-                            None => longest = 1,
-                        },
-                        None => longest = 0,
+                    let team_at_current = self.at(current_cell.0 as usize, current_cell.1 as usize);
+                    if team_at_current == suite_team && team_at_current != Team::None {
+                        longest += 1;
+                        if longest >= 4 {
+                            return team_at_current;
+                        }
+                    } else {
+                        longest = 1;
                     }
-                    suite_color = self.at(current_cell.0 as usize, current_cell.1 as usize);
+                    suite_team = team_at_current;
                 }
             }
         }
 
-        return None;
+        return Team::None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_1() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -------
+                -------
+                ---X---
+                ---X---
+                ---X---
+                ---X---
+            ",
+        );
+        assert_eq!(engine.check_win(), Team::Red);
     }
 
-    fn is_in_grid(&self, coo: &Cell) -> bool {
-        coo.0 > 0 && coo.1 > 0 && coo.0 < self.width as isize && coo.1 < self.height as isize
+    #[test]
+    fn test_2() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -------
+                -------
+                -------
+                -------
+                -------
+                XXXX---
+            ",
+        );
+        assert_eq!(engine.check_win(), Team::Red);
+    }
+    #[test]
+    fn test_3() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -------
+                -------
+                ------X
+                ------X
+                ------X
+                ------X
+            ",
+        );
+        assert_eq!(engine.check_win(), Team::Red);
+    }
+    #[test]
+    fn test_4() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -------
+                -------
+                ----X--
+                ---X---
+                --X----
+                -X-----
+            ",
+        );
+        assert_eq!(engine.check_win(), Team::Red);
+    }
+    #[test]
+    fn test_5() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                XXXX---
+                -------
+                -------
+                -------
+                -------
+                -------
+            ",
+        );
+        assert_eq!(engine.check_win(), Team::Red);
+    }
+    #[test]
+    fn test_6() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -XXXXXX
+                --X----
+                ---X---
+                ----X--
+                -------
+                -------
+            ",
+        );
+        assert_eq!(engine.check_win(), Team::Red);
     }
 }
