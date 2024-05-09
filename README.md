@@ -5,5 +5,7 @@ You have no interest in using it.
 
 ## TODO
 - Add a located win system
-- Refactor a little
-- Make a GUI
+- Made adaptative resizing,
+- Column color when
+- Green win
+- Menu ?

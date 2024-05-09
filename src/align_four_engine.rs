@@ -8,11 +8,11 @@ type Cell = (isize, isize);
 pub enum Team {
     Red,
     Blue,
-    None,
+    Nothing,
 }
 
 pub struct AlignFourEngine {
-    grid: Vec<Team>,
+    pub grid: Vec<Team>,
     width: usize,
     height: usize,
     turn: Team,
@@ -22,20 +22,21 @@ impl AlignFourEngine {
     // Constructors
     pub fn default() -> Self {
         Self {
-            grid: vec![Team::None; 7 * 6],
+            grid: vec![Team::Nothing; 7 * 6],
             width: 7,
             height: 6,
             turn: Team::Blue,
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_grid(grid_str: &str) -> Self {
         let mut grid = Vec::new();
         for c in grid_str.chars() {
             match c {
                 'X' => grid.push(Team::Red),
                 'O' => grid.push(Team::Blue),
-                '-' => grid.push(Team::None),
+                '-' => grid.push(Team::Nothing),
                 _ => (),
             }
         }
@@ -51,7 +52,7 @@ impl AlignFourEngine {
     #[allow(dead_code)]
     pub fn new(width: usize, height: usize) -> Self {
         Self {
-            grid: vec![Team::None; width * height],
+            grid: vec![Team::Nothing; width * height],
             width,
             height,
             turn: Team::Blue,
@@ -93,7 +94,7 @@ impl AlignFourEngine {
     pub fn play_at(&mut self, x: usize) -> Result<usize, AlignFourError> {
         for y in (0..self.height).rev() {
             match self.at(x, y) {
-                Team::None => {
+                Team::Nothing => {
                     *self.at_mut(x, y) = self.turn;
                     return Ok(y);
                 }
@@ -104,7 +105,7 @@ impl AlignFourEngine {
         return Err(AlignFourError::ColumnFull);
     }
 
-    pub fn check_win(&self) -> Team {
+    pub fn check_win(&self) -> Option<Team> {
         /* It is very weird how I am at the same time horrified by what I just wrote and amazingly proud of myself for the masterpiece of engineering that THIS is */
 
         type Pattern = [Cell; 4];
@@ -125,7 +126,7 @@ impl AlignFourEngine {
                     start_point[strategy].0 + next_line[strategy].0 * line_repeat,
                     start_point[strategy].1 + next_line[strategy].1 * line_repeat,
                 );
-                let mut suite_team: Team = Team::None;
+                let mut suite_team: Team = Team::Nothing;
                 let mut longest: u8 = 0;
 
                 for _cell_repeat in 0..cell_repeats[strategy] {
@@ -135,10 +136,10 @@ impl AlignFourEngine {
                         continue;
                     }
                     let team_at_current = self.at(current_cell.0 as usize, current_cell.1 as usize);
-                    if team_at_current == suite_team && team_at_current != Team::None {
+                    if team_at_current == suite_team && team_at_current != Team::Nothing {
                         longest += 1;
                         if longest >= 4 {
-                            return team_at_current;
+                            return Some(team_at_current);
                         }
                     } else {
                         longest = 1;
@@ -148,7 +149,13 @@ impl AlignFourEngine {
             }
         }
 
-        return Team::None;
+        for cell in self.grid.iter() {
+            match cell {
+                Team::Nothing => return None,
+                _ => (),
+            }
+        }
+        return Some(Team::Nothing);
     }
 }
 
@@ -168,7 +175,7 @@ mod tests {
                 ---X---
             ",
         );
-        assert_eq!(engine.check_win(), Team::Red);
+        assert_eq!(engine.check_win(), Some(Team::Red));
     }
 
     #[test]
@@ -183,7 +190,7 @@ mod tests {
                 XXXX---
             ",
         );
-        assert_eq!(engine.check_win(), Team::Red);
+        assert_eq!(engine.check_win(), Some(Team::Red));
     }
     #[test]
     fn test_3() {
@@ -197,7 +204,7 @@ mod tests {
                 ------X
             ",
         );
-        assert_eq!(engine.check_win(), Team::Red);
+        assert_eq!(engine.check_win(), Some(Team::Red));
     }
     #[test]
     fn test_4() {
@@ -211,7 +218,7 @@ mod tests {
                 -X-----
             ",
         );
-        assert_eq!(engine.check_win(), Team::Red);
+        assert_eq!(engine.check_win(), Some(Team::Red));
     }
     #[test]
     fn test_5() {
@@ -225,7 +232,7 @@ mod tests {
                 -------
             ",
         );
-        assert_eq!(engine.check_win(), Team::Red);
+        assert_eq!(engine.check_win(), Some(Team::Red));
     }
     #[test]
     fn test_6() {
@@ -239,6 +246,6 @@ mod tests {
                 -------
             ",
         );
-        assert_eq!(engine.check_win(), Team::Red);
+        assert_eq!(engine.check_win(), Some(Team::Red));
     }
 }

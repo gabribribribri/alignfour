@@ -6,13 +6,13 @@
 use crate::align_four_engine::{AlignFourEngine, Team};
 
 pub struct CLIWrapper {
-    game: AlignFourEngine,
+    engine: AlignFourEngine,
 }
 
 impl CLIWrapper {
     pub fn default() -> Self {
         Self {
-            game: AlignFourEngine::default(),
+            engine: AlignFourEngine::default(),
         }
     }
 
@@ -20,23 +20,27 @@ impl CLIWrapper {
         loop {
             self.print();
             println!();
-            match self.game.check_win() {
-                Team::Red | Team::Blue => {
+            match self.engine.check_win() {
+                Some(Team::Red | Team::Blue) => {
                     println!("Les {} ont gagnés !!!", self.turn_symbol());
                     break;
                 }
-                Team::None => (),
+                Some(Team::Nothing) => {
+                    println!("C'est une égalité !!!");
+                    break;
+                }
+                _ => (),
             }
             loop {
                 let sanitized_user_input = self.get_sanitized_user_input();
-                match self.game.play_at(sanitized_user_input - 1) {
+                match self.engine.play_at(sanitized_user_input - 1) {
                     Ok(_) => (),
                     Err(_) => {
                         println!("You cannot place anything in this column");
                         continue;
                     }
                 }
-                self.game.switch_turns();
+                self.engine.switch_turns();
                 break;
             }
         }
@@ -44,16 +48,16 @@ impl CLIWrapper {
 
     fn print(&mut self) {
         println!(" 1 | 2 | 3 | 4 | 5 | 6 | 7 |");
-        for y in 0..self.game.height() {
+        for y in 0..self.engine.height() {
             let mut line = String::new();
             line.push(' ');
-            for x in 0..self.game.width() {
+            for x in 0..self.engine.width() {
                 // dbg!(x, y, self.game.at(x, y));
                 // dbg!(self.game.at(6, 4), self.game.at(0, 5));
-                line.push(match self.game.at(x, y) {
+                line.push(match self.engine.at(x, y) {
                     Team::Red => 'X',
                     Team::Blue => 'O',
-                    Team::None => ' ',
+                    Team::Nothing => ' ',
                 });
                 line.push_str(" | ");
             }
@@ -62,7 +66,7 @@ impl CLIWrapper {
         }
     }
     fn turn_symbol(&self) -> char {
-        if self.game.turn() == Team::Red {
+        if self.engine.turn() == Team::Red {
             'X'
         } else {
             'O'
