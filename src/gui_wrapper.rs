@@ -124,7 +124,7 @@ impl<'a> GUIWrapper<'a> {
         );
         for x in 0..self.engine.width() {
             for y in 0..self.engine.height() {
-                self.circles[y * self.engine.width() + x].set_position((
+                self.at_mut(x, y).set_position((
                     x as f32 * padding_x as f32 + offset_x as f32,
                     y as f32 * padding_y as f32 + offset_y as f32,
                 ));
@@ -139,7 +139,7 @@ impl<'a> GUIWrapper<'a> {
     }
 
     fn update_circles(&mut self) {
-        for (i, cell) in self.engine.grid.iter().enumerate() {
+        for (i, cell) in self.engine.grid().iter().enumerate() {
             self.circles[i].set_fill_color(match cell {
                 Team::Blue => BLUE_TEAM,
                 Team::Red => RED_TEAM,
@@ -161,11 +161,7 @@ impl<'a> GUIWrapper<'a> {
         &self.circles[y * self.engine.width() + x]
     }
 
-    #[allow(dead_code)]
-    fn at_mut<'b>(&'b mut self, x: usize, y: usize) -> &'b mut CircleShape
-    where
-        'b: 'a,
-    {
+    fn at_mut<'b>(&'b mut self, x: usize, y: usize) -> &'b mut CircleShape<'a> {
         &mut self.circles[y * self.engine.width() + x]
     }
 }

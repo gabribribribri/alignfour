@@ -12,7 +12,7 @@ pub enum Team {
 }
 
 pub struct AlignFourEngine {
-    pub grid: Vec<Team>,
+    grid: Vec<Team>,
     width: usize,
     height: usize,
     turn: Team,
@@ -76,6 +76,10 @@ impl AlignFourEngine {
 
     fn at_mut(&mut self, x: usize, y: usize) -> &mut Team {
         &mut self.grid[y * self.width + x]
+    }
+
+    pub fn grid(&mut self) -> &mut Vec<Team> {
+        &mut self.grid
     }
 
     fn is_in_grid(&self, coo: &Cell) -> bool {
