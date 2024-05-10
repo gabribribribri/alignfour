@@ -1,4 +1,4 @@
-# Simpel alignfour game
+# Simple alignfour game
 
 Simple little Align Four game written in Rust with SFML
 
