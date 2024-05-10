@@ -9,8 +9,3 @@ git clone https://github.com/gabribribribri/alignfour.git
 cd alignfour
 cargo run --release
 ```
-
-## TODO
-- Add a located win system
-- Green win
-- Menu ?
