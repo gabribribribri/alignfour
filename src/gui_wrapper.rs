@@ -7,9 +7,10 @@ use std::{
     cmp::max,
     time::{Duration, Instant},
 };
-
+type Cell = (isize, isize);
 const BLUE_COLOR_LIGHT: Color = Color::rgb(22, 130, 224);
 const RED_COLOR_LIGHT: Color = Color::rgb(150, 29, 47);
+const GREEN_WIN: Color = Color::rgb(25, 179, 20);
 const FPS_LIMIT: u64 = 120;
 const FRAME_TIME: Duration = Duration::from_millis(1000 / FPS_LIMIT);
 
@@ -17,6 +18,8 @@ pub struct GUIWrapper<'a> {
     engine: AlignFourEngine,
     circles: Vec<CircleShape<'a>>,
     window: RenderWindow,
+    win_state: Option<(Team, Vec<Cell>)>,
+    win_timer: Instant,
 }
 
 impl<'a> GUIWrapper<'a> {
@@ -32,22 +35,19 @@ impl<'a> GUIWrapper<'a> {
                 Style::default(),
                 &Default::default(),
             ),
+            win_state: None,
+            win_timer: Instant::now(), // apparently the only way to construct an instant
         }
     }
 
     pub fn run(mut self) {
         while self.window.is_open() {
             let time_start_gameloop = Instant::now();
-            self.handle_events();
-            if self.handle_win() {
-                self.window.close()
+
+            match &self.win_state {
+                Some(_) => self.win_gameloop(),
+                None => self.in_game_gameloop(),
             }
-            self.handle_over();
-            self.update_circles();
-            //draw to screen
-            self.window.clear(Color::rgb(96, 96, 96));
-            self.draw_circles();
-            self.window.display();
 
             let duration_gameloop = time_start_gameloop.elapsed();
             if duration_gameloop < FRAME_TIME {
@@ -56,7 +56,54 @@ impl<'a> GUIWrapper<'a> {
         }
     }
 
-    fn handle_events(&mut self) {
+    fn in_game_gameloop(&mut self) {
+        self.handle_over();
+
+        self.handle_events(true);
+
+        self.update_circles();
+
+        // draw to screen
+        self.render_everything();
+    }
+
+    fn win_gameloop(&mut self) {
+        self.handle_events(false);
+        if self.win_timer.elapsed() > Duration::from_millis(700) {
+            // to fix later, putting clone here is disgusting
+            match self.win_state.clone() {
+                Some((_, win_cells_coo)) => {
+                    for win_cell_coo in win_cells_coo {
+                        let win_cell =
+                            self.at_mut(win_cell_coo.0 as usize, win_cell_coo.1 as usize);
+                        if win_cell.outline_color() == GREEN_WIN {
+                            win_cell.set_outline_thickness(0.0);
+                            win_cell.set_outline_color(Color::TRANSPARENT);
+                        } else {
+                            win_cell.set_outline_thickness(-5.0);
+                            win_cell.set_outline_color(GREEN_WIN);
+                        }
+                    }
+                }
+                None => {
+                    panic!("If `win_gameloop` was called, `win_state` is supposed to be Some(_)")
+                }
+            }
+            self.win_timer = Instant::now();
+        }
+
+        self.update_circles();
+        // draw to screen
+        self.render_everything();
+    }
+
+    fn render_everything(&mut self) {
+        self.window.clear(Color::rgb(96, 96, 96));
+        self.draw_circles();
+        self.window.display();
+    }
+
+    fn handle_events(&mut self, handle_clicks: bool) {
         while let Some(ev) = self.window.poll_event() {
             match ev {
                 Event::Closed
@@ -76,23 +123,13 @@ impl<'a> GUIWrapper<'a> {
                     button: Button::Left,
                     x,
                     ..
-                } => self.handle_click(x),
+                } => {
+                    if handle_clicks {
+                        self.handle_click(x)
+                    }
+                }
                 _ => (),
             }
-        }
-    }
-
-    fn handle_win(&self) -> bool {
-        match self.engine.check_win() {
-            Some(Team::Red | Team::Blue) => {
-                println!("Les {} ont gagnés !!!", self.turn_color_string());
-                true
-            }
-            Some(Team::Nothing) => {
-                println!("C'est une égalité !!!");
-                true
-            }
-            _ => false,
         }
     }
 
@@ -103,7 +140,12 @@ impl<'a> GUIWrapper<'a> {
             let col_right = col.left + col.width;
             if col_left < x as f32 && col_right > x as f32 {
                 match self.engine.play_at(gx) {
-                    Ok(_) => self.engine.switch_turns(),
+                    Ok(_) => {
+                        self.clear_outlines();
+                        self.win_state = self.engine.check_win();
+                        self.engine.switch_turns();
+                        return;
+                    }
                     Err(_) => (),
                 }
             }
@@ -151,6 +193,13 @@ impl<'a> GUIWrapper<'a> {
         }
     }
 
+    fn clear_outlines(&mut self) {
+        for circle in &mut self.circles {
+            circle.set_outline_color(Color::TRANSPARENT);
+            circle.set_outline_thickness(0.0);
+        }
+    }
+
     fn draw_circles(&mut self) {
         for circle in &self.circles {
             self.window.draw(circle);
@@ -164,14 +213,6 @@ impl<'a> GUIWrapper<'a> {
                 Team::Red => RED_COLOR_LIGHT,
                 Team::Nothing => Color::rgb(64, 64, 64),
             });
-        }
-    }
-
-    fn turn_color_string(&self) -> String {
-        if self.engine.turn() != Team::Red {
-            String::from("rouges")
-        } else {
-            String::from("bleus")
         }
     }
 

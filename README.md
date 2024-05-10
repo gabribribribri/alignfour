@@ -1,11 +1,16 @@
-# Align 4 Game written in Rust
+# Simpel alignfour game
 
-Still in the MVP Stage.
-You have no interest in using it.
+Simple little Align Four game written in Rust with SFML
+
+## How to play
+You need to have [a working Rust installation](https://www.rust-lang.org/tools/install) then :
+```sh
+git clone https://github.com/gabribribribri/alignfour.git
+cd alignfour
+cargo run --release
+```
 
 ## TODO
 - Add a located win system
-- Made adaptative resizing,
-- Column color when
 - Green win
 - Menu ?

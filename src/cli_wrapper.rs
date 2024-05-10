@@ -20,12 +20,13 @@ impl CLIWrapper {
         loop {
             self.print();
             println!();
+            // téma la gueule du pattern matching
             match self.engine.check_win() {
-                Some(Team::Red | Team::Blue) => {
+                Some((Team::Red | Team::Blue, _)) => {
                     println!("Les {} ont gagnés !!!", self.turn_symbol());
                     break;
                 }
-                Some(Team::Nothing) => {
+                Some((Team::Nothing, _)) => {
                     println!("C'est une égalité !!!");
                     break;
                 }
