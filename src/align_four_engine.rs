@@ -116,8 +116,8 @@ impl AlignFourEngine {
         let start_point: Pattern = [
             (0, -1),
             (-1, 0),
-            (self.height as isize - 3, -1),
-            (self.width as isize + self.height as isize - 3, -1),
+            (3 - self.height() as isize, -1),
+            (self.width() as isize + self.height as isize - 2, -1),
         ]; // one less/more that the actual start
         let next_line: Pattern = [(1, 0), (0, 1), (1, 0), (-1, 0)];
         let next_cell: Pattern = [(0, 1), (1, 0), (1, 1), (-1, 1)];
@@ -247,6 +247,48 @@ mod tests {
                 ---X---
                 ----X--
                 -------
+                -------
+            ",
+        );
+        assert_eq!(engine.check_win(), Some(Team::Red));
+    }
+    #[test]
+    fn test_7() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -X-----
+                --X----
+                ---X---
+                ----X--
+                -------
+                -------
+            ",
+        );
+        assert_eq!(engine.check_win(), Some(Team::Red));
+    }
+    #[test]
+    fn test_8() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -------
+                -------
+                X------
+                -X-----
+                --X----
+                ---X---
+            ",
+        );
+        assert_eq!(engine.check_win(), Some(Team::Red));
+    }
+    #[test]
+    fn test_9() {
+        let engine = AlignFourEngine::from_grid(
+            r"
+                -------
+                ---X---
+                ----X--
+                -----X-
+                ------X
                 -------
             ",
         );
