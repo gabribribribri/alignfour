@@ -19,6 +19,7 @@ pub struct GUIWrapper<'a> {
     circles: Vec<CircleShape<'a>>,
     window: RenderWindow,
     win_timer: Instant,
+    win_cells_coo: Vec<Cell>,
 }
 
 impl<'a> GUIWrapper<'a> {
@@ -35,17 +36,15 @@ impl<'a> GUIWrapper<'a> {
                 &Default::default(),
             ),
             win_timer: Instant::now(), // apparently the only way to construct an instant
+            win_cells_coo: Vec::new(),
         }
     }
 
-    pub fn run(mut self) {
+    pub fn gameloop(&mut self, mut f: Box<dyn FnMut(&mut Self)>) {
         while self.window.is_open() {
             let time_start_gameloop = Instant::now();
 
-            self.handle_over();
-            self.handle_events(true);
-            self.update_circles();
-            self.render_everything();
+            f(self);
 
             let duration_gameloop = time_start_gameloop.elapsed();
             if duration_gameloop < FRAME_TIME {
@@ -54,25 +53,23 @@ impl<'a> GUIWrapper<'a> {
         }
     }
 
-    fn win_animation(&mut self, win_cells_coo: &Vec<Cell>) {
-        while self.window.is_open() {
-            let time_start_gameloop = Instant::now();
-
-            self.handle_events(false);
-            self.win_outlines_blink(win_cells_coo);
-            self.update_circles();
-            self.render_everything();
-
-            let duration_gameloop = time_start_gameloop.elapsed();
-            if duration_gameloop < FRAME_TIME {
-                std::thread::sleep(FRAME_TIME - duration_gameloop);
-            }
-        }
+    pub fn run(&mut self) {
+        self.handle_over();
+        self.handle_events(true);
+        self.update_circles();
+        self.render_everything();
     }
 
-    fn win_outlines_blink(&mut self, win_cells_coo: &Vec<Cell>) {
+    fn win(&mut self) {
+        self.handle_events(false);
+        self.win_outlines_blink();
+        self.update_circles();
+        self.render_everything();
+    }
+
+    fn win_outlines_blink(&mut self) {
         if self.win_timer.elapsed() > Duration::from_millis(700) {
-            for win_cell_coo in win_cells_coo {
+            for win_cell_coo in self.win_cells_coo.clone() {
                 let win_cell = self.at_mut(win_cell_coo.0 as usize, win_cell_coo.1 as usize);
                 if win_cell.outline_color() == GREEN_WIN {
                     win_cell.set_outline_thickness(0.0);
@@ -133,7 +130,10 @@ impl<'a> GUIWrapper<'a> {
                         self.clear_outlines();
                         match self.engine.check_win() {
                             None => (),
-                            Some((_, win_cells_coo)) => self.win_animation(&win_cells_coo),
+                            Some((_, win_cells_coo)) => {
+                                self.win_cells_coo = win_cells_coo;
+                                self.gameloop(Box::new(GUIWrapper::win))
+                            }
                         }
                         self.engine.switch_turns();
                         return;

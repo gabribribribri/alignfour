@@ -7,8 +7,8 @@ use gui_wrapper::GUIWrapper;
 mod gui_wrapper;
 
 fn gui_run() {
-    let wrapper = GUIWrapper::default();
-    wrapper.run();
+    let mut wrapper = GUIWrapper::default();
+    wrapper.gameloop(Box::new(GUIWrapper::run));
 }
 
 fn cli_run() {
