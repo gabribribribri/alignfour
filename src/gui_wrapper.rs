@@ -18,7 +18,6 @@ pub struct GUIWrapper<'a> {
     engine: AlignFourEngine,
     circles: Vec<CircleShape<'a>>,
     window: RenderWindow,
-    win_state: Option<(Team, Vec<Cell>)>,
     win_timer: Instant,
 }
 
@@ -35,7 +34,6 @@ impl<'a> GUIWrapper<'a> {
                 Style::default(),
                 &Default::default(),
             ),
-            win_state: None,
             win_timer: Instant::now(), // apparently the only way to construct an instant
         }
     }
@@ -44,10 +42,10 @@ impl<'a> GUIWrapper<'a> {
         while self.window.is_open() {
             let time_start_gameloop = Instant::now();
 
-            match &self.win_state {
-                Some(_) => self.win_gameloop(),
-                None => self.in_game_gameloop(),
-            }
+            self.handle_over();
+            self.handle_events(true);
+            self.update_circles();
+            self.render_everything();
 
             let duration_gameloop = time_start_gameloop.elapsed();
             if duration_gameloop < FRAME_TIME {
@@ -56,45 +54,36 @@ impl<'a> GUIWrapper<'a> {
         }
     }
 
-    fn in_game_gameloop(&mut self) {
-        self.handle_over();
+    fn win_animation(&mut self, win_cells_coo: &Vec<Cell>) {
+        while self.window.is_open() {
+            let time_start_gameloop = Instant::now();
 
-        self.handle_events(true);
+            self.handle_events(false);
+            self.win_outlines_blink(win_cells_coo);
+            self.update_circles();
+            self.render_everything();
 
-        self.update_circles();
-
-        // draw to screen
-        self.render_everything();
+            let duration_gameloop = time_start_gameloop.elapsed();
+            if duration_gameloop < FRAME_TIME {
+                std::thread::sleep(FRAME_TIME - duration_gameloop);
+            }
+        }
     }
 
-    fn win_gameloop(&mut self) {
-        self.handle_events(false);
+    fn win_outlines_blink(&mut self, win_cells_coo: &Vec<Cell>) {
         if self.win_timer.elapsed() > Duration::from_millis(700) {
-            // to fix later, putting clone here is disgusting
-            match self.win_state.clone() {
-                Some((_, win_cells_coo)) => {
-                    for win_cell_coo in win_cells_coo {
-                        let win_cell =
-                            self.at_mut(win_cell_coo.0 as usize, win_cell_coo.1 as usize);
-                        if win_cell.outline_color() == GREEN_WIN {
-                            win_cell.set_outline_thickness(0.0);
-                            win_cell.set_outline_color(Color::TRANSPARENT);
-                        } else {
-                            win_cell.set_outline_thickness(-5.0);
-                            win_cell.set_outline_color(GREEN_WIN);
-                        }
-                    }
-                }
-                None => {
-                    panic!("If `win_gameloop` was called, `win_state` is supposed to be Some(_)")
+            for win_cell_coo in win_cells_coo {
+                let win_cell = self.at_mut(win_cell_coo.0 as usize, win_cell_coo.1 as usize);
+                if win_cell.outline_color() == GREEN_WIN {
+                    win_cell.set_outline_thickness(0.0);
+                    win_cell.set_outline_color(Color::TRANSPARENT);
+                } else {
+                    win_cell.set_outline_thickness(-5.0);
+                    win_cell.set_outline_color(GREEN_WIN);
                 }
             }
             self.win_timer = Instant::now();
         }
-
-        self.update_circles();
-        // draw to screen
-        self.render_everything();
     }
 
     fn render_everything(&mut self) {
@@ -142,7 +131,10 @@ impl<'a> GUIWrapper<'a> {
                 match self.engine.play_at(gx) {
                     Ok(_) => {
                         self.clear_outlines();
-                        self.win_state = self.engine.check_win();
+                        match self.engine.check_win() {
+                            None => (),
+                            Some((_, win_cells_coo)) => self.win_animation(&win_cells_coo),
+                        }
                         self.engine.switch_turns();
                         return;
                     }
