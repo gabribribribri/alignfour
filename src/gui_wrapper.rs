@@ -11,6 +11,10 @@ type Cell = (isize, isize);
 const BLUE_COLOR_LIGHT: Color = Color::rgb(22, 130, 224);
 const RED_COLOR_LIGHT: Color = Color::rgb(150, 29, 47);
 const GREEN_WIN: Color = Color::rgb(25, 179, 20);
+
+const PADDING_X: i32 = 130;
+const PADDING_Y: i32 = 120;
+
 const FPS_LIMIT: u64 = 120;
 const FRAME_TIME: Duration = Duration::from_millis(1000 / FPS_LIMIT);
 
@@ -38,14 +42,12 @@ impl<'a> GUIWrapper<'a> {
         }
     }
 
-    pub fn run(mut self) {
+    pub fn gameloop(&mut self, mut f: Box<dyn FnMut(&mut Self)>) {
+        self.update_circles();
         while self.window.is_open() {
             let time_start_gameloop = Instant::now();
 
-            self.handle_over();
-            self.handle_events(true);
-            self.update_circles();
-            self.render_everything();
+            f(self);
 
             let duration_gameloop = time_start_gameloop.elapsed();
             if duration_gameloop < FRAME_TIME {
@@ -54,25 +56,22 @@ impl<'a> GUIWrapper<'a> {
         }
     }
 
-    fn win_animation(&mut self, win_cells_coo: &Vec<Cell>) {
-        while self.window.is_open() {
-            let time_start_gameloop = Instant::now();
-
-            self.handle_events(false);
-            self.win_outlines_blink(win_cells_coo);
-            self.update_circles();
-            self.render_everything();
-
-            let duration_gameloop = time_start_gameloop.elapsed();
-            if duration_gameloop < FRAME_TIME {
-                std::thread::sleep(FRAME_TIME - duration_gameloop);
-            }
-        }
+    pub fn run(&mut self) {
+        self.handle_over();
+        self.handle_events(true);
+        self.render_everything();
     }
 
-    fn win_outlines_blink(&mut self, win_cells_coo: &Vec<Cell>) {
+    fn win(&mut self) {
+        self.handle_events(false);
+        self.win_outlines_blink();
+        self.render_everything();
+    }
+
+    fn win_outlines_blink(&mut self) {
+        let win_cells_coo = self.engine.check_win().unwrap().1;
         if self.win_timer.elapsed() > Duration::from_millis(700) {
-            for win_cell_coo in win_cells_coo {
+            for win_cell_coo in win_cells_coo.clone() {
                 let win_cell = self.at_mut(win_cell_coo.0 as usize, win_cell_coo.1 as usize);
                 if win_cell.outline_color() == GREEN_WIN {
                     win_cell.set_outline_thickness(0.0);
@@ -131,9 +130,10 @@ impl<'a> GUIWrapper<'a> {
                 match self.engine.play_at(gx) {
                     Ok(_) => {
                         self.clear_outlines();
+                        self.update_circles();
                         match self.engine.check_win() {
                             None => (),
-                            Some((_, win_cells_coo)) => self.win_animation(&win_cells_coo),
+                            Some((_, win_cells_coo)) => self.gameloop(Box::new(GUIWrapper::win)),
                         }
                         self.engine.switch_turns();
                         return;
@@ -165,21 +165,19 @@ impl<'a> GUIWrapper<'a> {
     }
 
     fn resize(&mut self, width: u32, height: u32) {
-        let padding_x = 150;
-        let padding_y = 120;
         let offset_x = max(
             50,
-            (width as i32 - self.engine.width() as i32 * padding_x) / 2,
+            (width as i32 - self.engine.width() as i32 * PADDING_X) / 2,
         );
         let offset_y = max(
             50,
-            (height as i32 - self.engine.height() as i32 * padding_y) / 2,
+            (height as i32 - self.engine.height() as i32 * PADDING_Y) / 2,
         );
         for x in 0..self.engine.width() {
             for y in 0..self.engine.height() {
                 self.at_mut(x, y).set_position((
-                    x as f32 * padding_x as f32 + offset_x as f32,
-                    y as f32 * padding_y as f32 + offset_y as f32,
+                    x as f32 * PADDING_X as f32 + offset_x as f32,
+                    y as f32 * PADDING_Y as f32 + offset_y as f32,
                 ));
             }
         }
