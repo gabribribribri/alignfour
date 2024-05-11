@@ -29,6 +29,7 @@ impl AlignFourEngine {
         }
     }
 
+    // was for debugging
     #[allow(dead_code)]
     pub fn from_grid(grid_str: &str) -> Self {
         let mut grid = Vec::new();
@@ -48,8 +49,6 @@ impl AlignFourEngine {
         }
     }
 
-    #[deprecated]
-    #[allow(dead_code)]
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             grid: vec![Team::Nothing; width * height],
@@ -121,8 +120,8 @@ impl AlignFourEngine {
         ]; // one less/more that the actual start
         let next_line: Pattern = [(1, 0), (0, 1), (1, 0), (-1, 0)];
         let next_cell: Pattern = [(0, 1), (1, 0), (1, 1), (-1, 1)];
-        let cell_repeats: [isize; 4] = [6, 7, 6, 6];
-        let line_repeats: [isize; 4] = [7, 6, 7, 7];
+        let cell_repeats: [usize; 4] = [self.height(), self.width(), self.height(), self.height()];
+        let line_repeats: [usize; 4] = [self.width(), self.height(), self.width(), self.width()];
 
         let mut win_cells: (Team, Vec<Cell>) = (Team::Nothing, Vec::new());
         for strategy in 0..4usize {
@@ -133,8 +132,8 @@ impl AlignFourEngine {
                     win_cells.1.clear();
                 }
                 let mut current_cell: Cell = (
-                    start_point[strategy].0 + next_line[strategy].0 * line_repeat,
-                    start_point[strategy].1 + next_line[strategy].1 * line_repeat,
+                    start_point[strategy].0 + next_line[strategy].0 * line_repeat as isize,
+                    start_point[strategy].1 + next_line[strategy].1 * line_repeat as isize,
                 );
                 let mut suite_team: Team = Team::Nothing;
 

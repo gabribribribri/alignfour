@@ -10,9 +10,9 @@ pub struct CLIWrapper {
 }
 
 impl CLIWrapper {
-    pub fn default() -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         Self {
-            engine: AlignFourEngine::default(),
+            engine: AlignFourEngine::new(width, height),
         }
     }
 
@@ -48,13 +48,16 @@ impl CLIWrapper {
     }
 
     fn print(&mut self) {
-        println!(" 1 | 2 | 3 | 4 | 5 | 6 | 7 |");
+        println!(
+            "{}",
+            (1..=self.engine.width())
+                .map(|x| format!(" {}{}|", x, if x >= 10 { '\0' } else { ' ' }))
+                .collect::<String>()
+        );
         for y in 0..self.engine.height() {
             let mut line = String::new();
             line.push(' ');
             for x in 0..self.engine.width() {
-                // dbg!(x, y, self.game.at(x, y));
-                // dbg!(self.game.at(6, 4), self.game.at(0, 5));
                 line.push(match self.engine.at(x, y) {
                     Team::Red => 'X',
                     Team::Blue => 'O',
@@ -63,7 +66,12 @@ impl CLIWrapper {
                 line.push_str(" | ");
             }
             println!("{}", line);
-            println!("---+---+---+---+---+---+---+");
+            println!(
+                "{}",
+                (1..=self.engine.width())
+                    .map(|_| "---+")
+                    .collect::<String>()
+            )
         }
     }
     fn turn_symbol(&self) -> char {
@@ -77,22 +85,26 @@ impl CLIWrapper {
     fn get_sanitized_user_input(&self) -> usize {
         loop {
             println!(
-                "[{}] >> Enter the column to play [1-7] :",
-                self.turn_symbol()
+                "[{}] >> Enter the column to play [1-{}] :",
+                self.turn_symbol(),
+                self.engine.width()
             );
             let mut input = String::new();
             std::io::stdin()
                 .read_line(&mut input)
                 .expect("Failed to read line from user");
             let trimed_input = input.trim();
-            if trimed_input.len() > 1 {
-                println!("You must enter only one digit\n");
+            if trimed_input.len() > 2 {
+                println!("You must enter max 2 digits\n");
                 continue;
             }
             match trimed_input.parse::<usize>() {
                 Ok(val) => {
-                    if val > 7 || val < 1 {
-                        println!("You must enter a digit between 1 and 7\n");
+                    if val > self.engine.width() || val < 1 {
+                        println!(
+                            "You must enter a digit between 1 and {}\n",
+                            self.engine.width()
+                        );
                         continue;
                     }
                     return val;

@@ -7,7 +7,6 @@ use std::{
     cmp::max,
     time::{Duration, Instant},
 };
-type Cell = (isize, isize);
 const BLUE_COLOR_LIGHT: Color = Color::rgb(22, 130, 224);
 const RED_COLOR_LIGHT: Color = Color::rgb(150, 29, 47);
 const GREEN_WIN: Color = Color::rgb(25, 179, 20);
@@ -27,22 +26,21 @@ pub struct GUIWrapper<'a> {
 
 impl<'a> GUIWrapper<'a> {
     //Constructors
-    pub fn default() -> Self {
-        let circles = vec![CircleShape::new(50.0, 30); 6 * 7];
+    pub fn new(width: usize, height: usize) -> Self {
         Self {
-            engine: AlignFourEngine::default(),
-            circles,
+            engine: AlignFourEngine::new(width, height),
+            circles: vec![CircleShape::new(50.0, 30); width * height],
             window: RenderWindow::new(
                 (1280, 720),
                 "alignfour",
                 Style::default(),
                 &Default::default(),
             ),
-            win_timer: Instant::now(), // apparently the only way to construct an instant
+            win_timer: Instant::now(),
         }
     }
 
-    pub fn gameloop(&mut self, mut f: Box<dyn FnMut(&mut Self)>) {
+    pub fn gameloop(&mut self, mut f: impl FnMut(&mut Self)) {
         self.update_circles();
         while self.window.is_open() {
             let time_start_gameloop = Instant::now();
@@ -133,7 +131,7 @@ impl<'a> GUIWrapper<'a> {
                         self.update_circles();
                         match self.engine.check_win() {
                             None => (),
-                            Some((_, win_cells_coo)) => self.gameloop(Box::new(GUIWrapper::win)),
+                            Some(_) => self.gameloop(GUIWrapper::win),
                         }
                         self.engine.switch_turns();
                         return;
