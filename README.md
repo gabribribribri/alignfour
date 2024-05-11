@@ -9,3 +9,8 @@ git clone https://github.com/gabribribribri/alignfour.git
 cd alignfour
 cargo run --release
 ```
+
+# TODO
+- Workaround the `.clone()` bullshit
+- Make adjustable grid sizes
+- don't update_cirle every frame
