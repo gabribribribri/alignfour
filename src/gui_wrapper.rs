@@ -7,8 +7,10 @@ use std::{
     cmp::max,
     time::{Duration, Instant},
 };
+
 const BLUE_COLOR_LIGHT: Color = Color::rgb(22, 130, 224);
 const RED_COLOR_LIGHT: Color = Color::rgb(150, 29, 47);
+const BACKGROUND_COLOR: Color = Color::rgb(96, 96, 96);
 const GREEN_WIN: Color = Color::rgb(25, 179, 20);
 
 const PADDING_X: i32 = 130;
@@ -84,7 +86,7 @@ impl<'a> GUIWrapper<'a> {
     }
 
     fn render_everything(&mut self) {
-        self.window.clear(Color::rgb(96, 96, 96));
+        self.window.clear(BACKGROUND_COLOR);
         self.draw_circles();
         self.window.display();
     }
@@ -213,7 +215,7 @@ impl<'a> GUIWrapper<'a> {
     }
 
     // Setters \ Getters
-    fn at(&self, x: usize, y: usize) -> &CircleShape {
+    fn at(&'_ self, x: usize, y: usize) -> &'_ CircleShape<'_> {
         &self.circles[y * self.engine.width() + x]
     }
 
