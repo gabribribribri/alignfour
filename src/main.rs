@@ -1,6 +1,8 @@
 // #![allow(dead_code)]
 use std::env;
 
+// This is a commentary
+
 mod align_four_engine;
 mod cli_wrapper;
 use cli_wrapper::CLIWrapper;
